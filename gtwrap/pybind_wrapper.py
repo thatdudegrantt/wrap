@@ -251,6 +251,17 @@ class PybindWrapper:
             method,
             (parser.StaticMethod, instantiator.InstantiatedStaticMethod))
         return_void = method.return_type.is_void()
+        return_ref = getattr(
+            getattr(method.return_type, 'type1', None), 'is_ref', False)
+
+        # For methods returning const T&, use reference_internal policy
+        # to avoid unnecessary copies and keep the returned reference alive.
+        if return_ref and is_method:
+            lambda_ret = ' -> const auto&'
+            ref_policy = ', py::return_value_policy::reference_internal'
+        else:
+            lambda_ret = ''
+            ref_policy = ''
 
         caller = cpp_class + "::" if not is_method else "self->"
         function_call = ('{opt_return} {caller}{method_name}'
@@ -263,10 +274,10 @@ class PybindWrapper:
 
         result = (
             '{prefix}.{cdef}("{py_method}",'
-            '[]({opt_self}{opt_comma}{args_signature_with_names}){{'
+            '[]({opt_self}{opt_comma}{args_signature_with_names}){lambda_ret}{{'
             '{function_call}'
             '}}'
-            '{py_args_names}{docstring}){suffix}'.format(
+            '{ref_policy}{py_args_names}{docstring}){suffix}'.format(
                 prefix=prefix,
                 cdef="def_static" if is_static else "def",
                 py_method=py_method,
@@ -275,7 +286,9 @@ class PybindWrapper:
                 opt_comma=', '
                 if is_method and args_signature_with_names else '',
                 args_signature_with_names=args_signature_with_names,
+                lambda_ret=lambda_ret,
                 function_call=function_call,
+                ref_policy=ref_policy,
                 py_args_names=py_args_names,
                 suffix=suffix,
                 # Try to get the function's docstring from the Doxygen XML.

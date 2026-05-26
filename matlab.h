@@ -436,8 +436,10 @@ MatrixView unwrapMatrixView(const mxArray* array) {
   if (mxIsDouble(array)==false || mxIsComplex(array) || mxIsSparse(array))
     error("unwrapMatrixView: not a full real double matrix");
   const mwSize rows = mxGetM(array), cols = mxGetN(array);
-  if (rows > static_cast<mwSize>(std::numeric_limits<Eigen::Index>::max()) ||
-      cols > static_cast<mwSize>(std::numeric_limits<Eigen::Index>::max())) {
+  const auto maxIndex =
+      static_cast<unsigned long long>((std::numeric_limits<Eigen::Index>::max)());
+  if (static_cast<unsigned long long>(rows) > maxIndex ||
+      static_cast<unsigned long long>(cols) > maxIndex) {
     error("unwrapMatrixView: matrix dimensions exceed Eigen::Index");
   }
   const Eigen::Index m = static_cast<Eigen::Index>(rows);

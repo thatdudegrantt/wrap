@@ -113,6 +113,9 @@ class TestWrap(unittest.TestCase):
             header_content = f.read()
 
         self.assertIn('unwrapMatrixView', header_content)
+        self.assertIn('mxIsSparse(array)', header_content)
+        self.assertIn('mwSize rows', header_content)
+        self.assertIn('Eigen::Index m', header_content)
         self.assertIn('Stride(m, 1)', header_content)
 
     def test_functions(self):

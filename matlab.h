@@ -37,6 +37,7 @@ extern "C" {
 #include <mex.h>
 }
 
+#include <limits>
 #include <list>
 #include <set>
 #include <sstream>
@@ -432,11 +433,18 @@ gtsam::Matrix unwrap< gtsam::Matrix >(const mxArray* array) {
 // unwrap a MATLAB double matrix as a const Eigen matrix view without copying
 template <typename MatrixView>
 MatrixView unwrapMatrixView(const mxArray* array) {
-  if (mxIsDouble(array)==false || mxIsComplex(array))
-    error("unwrapMatrixView: not a real double matrix");
-  int m = mxGetM(array), n = mxGetN(array);
+  if (mxIsDouble(array)==false || mxIsComplex(array) || mxIsSparse(array))
+    error("unwrapMatrixView: not a full real double matrix");
+  const mwSize rows = mxGetM(array), cols = mxGetN(array);
+  if (rows > static_cast<mwSize>(std::numeric_limits<Eigen::Index>::max()) ||
+      cols > static_cast<mwSize>(std::numeric_limits<Eigen::Index>::max())) {
+    error("unwrapMatrixView: matrix dimensions exceed Eigen::Index");
+  }
+  const Eigen::Index m = static_cast<Eigen::Index>(rows);
+  const Eigen::Index n = static_cast<Eigen::Index>(cols);
 #ifdef DEBUG_WRAP
-  mexPrintf("unwrapMatrixView called with %dx%d argument\n", m,n);
+  mexPrintf("unwrapMatrixView called with %lldx%lld argument\n",
+            static_cast<long long>(m), static_cast<long long>(n));
 #endif
   using Stride = Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>;
   using ConstMatrixMap = Eigen::Map<const gtsam::Matrix, 0, Stride>;

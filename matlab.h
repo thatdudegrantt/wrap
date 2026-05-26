@@ -429,6 +429,22 @@ gtsam::Matrix unwrap< gtsam::Matrix >(const mxArray* array) {
   return A;
 }
 
+// unwrap a MATLAB double matrix as a const Eigen matrix view without copying
+template <typename MatrixView>
+MatrixView unwrapMatrixView(const mxArray* array) {
+  if (mxIsDouble(array)==false || mxIsComplex(array))
+    error("unwrapMatrixView: not a real double matrix");
+  int m = mxGetM(array), n = mxGetN(array);
+#ifdef DEBUG_WRAP
+  mexPrintf("unwrapMatrixView called with %dx%d argument\n", m,n);
+#endif
+  using Stride = Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>;
+  using ConstMatrixMap = Eigen::Map<const gtsam::Matrix, 0, Stride>;
+  const double* data = static_cast<const double*>(mxGetData(array));
+  ConstMatrixMap map(data, m, n, Stride(m, 1));
+  return MatrixView(map);
+}
+
 /*
  [create_object] creates a MATLAB proxy class object with a mexhandle
  in the self property. Matlab does not allow the creation of matlab
@@ -547,4 +563,3 @@ Class* unwrap_ptr(const mxArray* obj, const string& propertyName) {
 //  static_assert(unwrap_shared_ptr_Matrix_attempted, "Matrix cannot be unwrapped as a shared pointer");
 //  return Matrix();
 //}
-
